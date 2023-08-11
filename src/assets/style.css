@@ -19,3 +19,26 @@ img {
   max-width: 100%;
   height: auto;
 }
+
+.footer {
+  display: flex;
+  position: absolute;
+  bottom: 0;
+  width: 90%;
+  margin: auto;
+  justify-content: right;
+  background-color: white;
+}
+
+.footer div {
+  padding: 8px;
+  margin: 4px;
+}
+
+svg {
+  display: inline-block;
+}
+
+.footer div:hover {
+  filter: invert(35%) sepia(98%) saturate(3478%) hue-rotate(225deg) brightness(100%) contrast(96%);
+}
