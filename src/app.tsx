@@ -8,7 +8,7 @@ const App: React.FC = () => {
 
   // URL Validation
   function validateUrl(url: string) {
-    return /^(https:\/\/)embed\.vntana\.com(\?|\/variant\?).*/.test(url);
+    return /^(https:\/\/)embed\.vntana\.com(\?|\/variant\?).*/.test(url); // Add dev/acc for testing
   }
 
   const disableBtn = async (setting: boolean) => {
@@ -33,9 +33,15 @@ const App: React.FC = () => {
     if (!validateUrl(url) || !(url.includes("uuid=") || url.includes("productUuid=")) || !url.includes("clientSlug=") || !url.includes("organizationSlug=")){
       setShowUrlError(true);
     } else {
+      let domainUrl = url;
+      if (!url.includes("&domain="))
+      {
+        domainUrl = domainUrl + "&domain=miro.com";
+      }
+      console.log(domainUrl);
       const embedFrame = await miro.board.createEmbed({
-          url: url,
-          mode: 'modal',
+          url: domainUrl,
+          mode: 'inline',
           width: 500,
           height: 500,
           x: viewport.x + (viewport.width/2),

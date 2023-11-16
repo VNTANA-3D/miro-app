@@ -4,9 +4,13 @@ handlers:
   - url: /
     static_files: dist/index.html
     secure: always
+    http_headers:
+      Strict-Transport-Security: max-age=31536000; includeSubDomains
     upload: dist/index.html
 
   - url: /(.*)
     static_files: dist/\1
     secure: always
+    http_headers:
+      Strict-Transport-Security: max-age=31536000; includeSubDomains
     upload: dist/(.*)
