@@ -1,14 +1,22 @@
 import * as React from 'react';
 import {createRoot} from 'react-dom/client';
+import queryString from 'query-string';
+import { EmbedProps } from '@mirohq/websdk-types';
 
 const App: React.FC = () => {
   const [url, setUrl] = React.useState("");
   const [showUrlError, setShowUrlError] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
+  miro.board.ui.on('selection:update', async (event) => {
+    if (event.items.length == 0)
+      return;
+    if (event.items[0].type === 'embed' && event.items[0].url.includes('embed.vntana.com'))
+      (document.getElementById("popout-checkbox") as HTMLInputElement).checked = (event.items[0].mode === 'modal'); });
+
   // URL Validation
   function validateUrl(url: string) {
-    return /^(https:\/\/)embed\.vntana\.com(\?|\/variant\?).*/.test(url); // Add dev/acc for testing
+    return /^(https:\/\/)embed\.vntana\.com(\?|\/variant\?)(productUuid|uuid).*clientSlug.*organizationSlug/.test(url); // Add dev/acc for testing
   }
 
   const disableBtn = async (setting: boolean) => {
@@ -16,42 +24,57 @@ const App: React.FC = () => {
   }
 
   const checkUrl = async () => {
-    setShowUrlError(false);
-    if (!validateUrl(url) || !(url.includes("uuid=") || url.includes("productUuid=")) || !url.includes("clientSlug=") || !url.includes("organizationSlug=")){
-      if (url.trim().length >= 1)
-        setShowUrlError(true);
-    } else {
-      setShowUrlError(false);
-    }
+    if (url.trim().length >= 1)
+      setShowUrlError(!validateUrl(url));
   }
 
   async function embedViewer() {
-    setShowUrlError(false);
     setIsLoading(true);
     const viewport = await miro.board.viewport.get();
 
-    if (!validateUrl(url) || !(url.includes("uuid=") || url.includes("productUuid=")) || !url.includes("clientSlug=") || !url.includes("organizationSlug=")){
+    if (!validateUrl(url)) {
       setShowUrlError(true);
     } else {
+      setShowUrlError(false);
+      const [, queries] = url.split('?');
+      let params = queryString.parse(queries);
+      console.log(params);
       let domainUrl = url;
       if (!url.includes("&domain="))
       {
         domainUrl = domainUrl + "&domain=miro.com";
       }
-      console.log(domainUrl);
-      const embedFrame = await miro.board.createEmbed({
-          url: domainUrl,
-          mode: 'inline',
-          width: 500,
-          height: 500,
-          x: viewport.x + (viewport.width/2),
-          y: viewport.y + (viewport.height/2)
-        });
+
+      let popout = (document.getElementById("popout-checkbox") as HTMLInputElement).checked;
+
+      let embedData : EmbedProps = {
+        url: domainUrl,
+        mode: popout ? 'modal' : 'inline',
+        width: 500,
+        height: 500,
+        x: viewport.x + (viewport.width/2),
+        y: viewport.y + (viewport.height/2)
+      };
+
+      if (!domainUrl.includes('variant'))
+        embedData.previewUrl = `https://api.vntana.com//assets/thumbnail/products/${params.productUuid}/organizations/${params.organizationSlug}/clients/${params.clientSlug}`;
+
+      const embedFrame = await miro.board.createEmbed(embedData);
         
-        await miro.board.viewport.zoomTo(embedFrame);
-        setUrl("");
+      await miro.board.viewport.zoomTo(embedFrame);
+      setUrl("");
     }
     setIsLoading(false);
+  }
+
+  async function updateViewer() {
+    const viewer = await miro.board.getSelection();
+    if (viewer.length > 0)
+    {
+      let check = (document.getElementById("popout-checkbox") as HTMLInputElement).checked;
+      viewer[0].mode = check ? 'modal' : 'inline';
+      await viewer[0].sync();
+    }
   }
 
   const disabled = url.trim().length < 1;
@@ -63,6 +86,19 @@ const App: React.FC = () => {
       <div className="cs1 ce12">
         <p>The VNTANA app will allow you to embed your VNTANA 3D assets directly into your Miro workspace!</p>
         <p>Simply copy the share link of the asset on the <a className="link link-primary" href="https://platform.vntana.com" target="_blank">VNTANA Platform</a> that you wish to embed, and enter it below.</p>
+      </div>
+      <div className="cs1 ce12">
+        <label className="checkbox" title="Indicate whether you'd like the viewer to open a pop-up modal upon viewing or remain embedded in the board at all times.">
+            <input 
+              id="popout-checkbox"
+              type="checkbox" 
+              tabIndex="0" 
+              onChange={() => {
+                updateViewer();
+              }}
+            />
+            <span>Pop-out Viewer</span>
+        </label>
       </div>
       <div className="cs1 ce12">
         <div className={`form-group ${showUrlError ? 'error' : ''}`} id="embed-group">
@@ -92,6 +128,9 @@ const App: React.FC = () => {
           }}
           disabled={disabled}
         >Embed 3D</button>
+      </div>
+      <div className="cs1 ce12">
+        
       </div>
       <div className="footer">
         <div title="Learn more about the VNTANA App">
